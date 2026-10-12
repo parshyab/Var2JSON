@@ -30,14 +30,18 @@ interface RGBAColor {
 }
 
 function isRGBAColor(value: unknown): value is RGBAColor {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "r" in value &&
-    "g" in value &&
-    "b" in value &&
-    "a" in value
-  );
+  if (typeof value !== "object" || value === null) return false;
+  return "r" in value && "g" in value && "b" in value;
+}
+
+function toSafeRGBA(value: unknown): RGBAColor | null {
+  if (typeof value !== "object" || value === null) return null;
+  const obj = value as Record<string, unknown>;
+  const r = typeof obj.r === "number" ? obj.r : 0;
+  const g = typeof obj.g === "number" ? obj.g : 0;
+  const b = typeof obj.b === "number" ? obj.b : 0;
+  const a = typeof obj.a === "number" ? obj.a : 1;
+  return { r, g, b, a };
 }
 
 function colorToString(color: RGBAColor, format: "hex" | "hex8" | "rgba"): string {
@@ -76,11 +80,17 @@ export function formatValue(
   rawValue: unknown,
   tokenType: ExportTokenType,
   config: ValueFormatConfig = DEFAULT_VALUE_FORMAT
-): string | number | boolean | null {
-  if (rawValue === null || rawValue === undefined) return null;
+): string | number | boolean {
+  if (rawValue === null || rawValue === undefined) return 0;
 
-  if (isRGBAColor(rawValue)) {
-    return colorToString(rawValue, config.colorFormat);
+  // Color objects (Figma {r, g, b, a} — `a` may be missing)
+  if (typeof rawValue === "object" && rawValue !== null) {
+    const rgba = toSafeRGBA(rawValue);
+    if (rgba) {
+      return colorToString(rgba, config.colorFormat);
+    }
+    // Fallback: stringify any other object
+    return JSON.stringify(rawValue);
   }
 
   if (typeof rawValue === "boolean") return rawValue;
@@ -119,7 +129,8 @@ export function formatValue(
     }
   }
 
-  return null;
+  // Fallback: coerce to string
+  return String(rawValue);
 }
 
 export function buildTokenTree(variables: ExportedVariable[]): TokenNode {
@@ -304,15 +315,6 @@ export function processVariables(input: ProcessVariablesInput): ExportResult {
       });
     } else {
       const formattedValue = formatValue(rawValue, tokenType, valueConfig);
-
-      if (formattedValue === null) {
-        diagnostics.push({
-          variableName: variable.name,
-          message: `Could not format value`,
-          severity: "error",
-        });
-        continue;
-      }
 
       exportedVariables.push({
         path,

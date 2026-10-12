@@ -99,8 +99,23 @@ describe("formatValue — Crayons-aligned defaults", () => {
     expect(formatValue(200, "duration")).toBe("200ms");
   });
 
-  it("returns null for null input", () => {
-    expect(formatValue(null, "color")).toBeNull();
+  it("returns 0 for null input", () => {
+    expect(formatValue(null, "color")).toBe(0);
+  });
+
+  it("handles color object without alpha (defaults to opaque)", () => {
+    const result = formatValue({ r: 1, g: 0, b: 0 }, "color");
+    expect(result).toBe("#ff0000");
+  });
+
+  it("handles color object with extra properties", () => {
+    const result = formatValue({ r: 0, g: 0, b: 1, a: 1, extra: true }, "color");
+    expect(result).toBe("#0000ff");
+  });
+
+  it("stringifies unknown object types instead of failing", () => {
+    const result = formatValue({ custom: "data" }, "color");
+    expect(typeof result).toBe("string");
   });
 
   it("passes through booleans", () => {
@@ -592,7 +607,7 @@ describe("processVariables — Crayons patterns", () => {
     expect(result.diagnostics[0].message).toContain("Alias target not found");
   });
 
-  it("reports diagnostics for unresolved types", () => {
+  it("exports unknown FLOAT as number type (no unresolved diagnostic)", () => {
     const vars = [makeVariable("unknownThing", "FLOAT", 42)];
     const allById = new Map(vars.map((v) => [v.id, v]));
 
@@ -604,9 +619,11 @@ describe("processVariables — Crayons patterns", () => {
       allVariablesById: allById,
     });
 
-    expect(result.diagnostics).toHaveLength(1);
-    expect(result.diagnostics[0].severity).toBe("warning");
-    expect(result.diagnostics[0].message).toContain("Unresolved token type");
+    expect(result.variableCount).toBe(1);
+    expect(result.diagnostics).toHaveLength(0);
+    const parsed = JSON.parse(result.jsonString);
+    expect(parsed.unknownThing.type).toBe("number");
+    expect(parsed.unknownThing.value).toBe(42);
   });
 
   it("handles mode switching", () => {
