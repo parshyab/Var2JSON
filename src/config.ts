@@ -154,6 +154,21 @@ export function resolveTokenTypeFromCollection(
   return null;
 }
 
+const CORNER_RADIUS_SEGMENTS = ["cornerradius", "borderradius", "radius"];
+
+export function resolveFilterCategory(
+  pathSegments: string[],
+  exportType: ExportTokenType
+): string {
+  const normalized = pathSegments.map(normalizeSegment);
+  for (const seg of normalized) {
+    if (CORNER_RADIUS_SEGMENTS.includes(seg)) {
+      return "cornerRadius";
+    }
+  }
+  return exportType;
+}
+
 export interface ValueFormatConfig {
   rootFontSize: number;
   spacingUnit: "rem" | "px" | "none";

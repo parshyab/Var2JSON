@@ -147,8 +147,8 @@ describe("formatValue — alternative configs", () => {
 describe("buildTokenTree", () => {
   it("builds nested structure from paths", () => {
     const vars: ExportedVariable[] = [
-      { path: ["color", "pink", "600"], value: "#da016a", type: "color" },
-      { path: ["color", "ash", "0"], value: "#ffffff", type: "color" },
+      { path: ["color", "pink", "600"], value: "#da016a", type: "color", filterCategory: "color" },
+      { path: ["color", "ash", "0"], value: "#ffffff", type: "color", filterCategory: "color" },
     ];
     const tree = buildTokenTree(vars);
     expect(tree).toEqual({
@@ -161,7 +161,7 @@ describe("buildTokenTree", () => {
 
   it("handles single-segment paths", () => {
     const vars: ExportedVariable[] = [
-      { path: ["opacity"], value: 0.5, type: "opacity" },
+      { path: ["opacity"], value: 0.5, type: "opacity", filterCategory: "opacity" },
     ];
     const tree = buildTokenTree(vars);
     expect(tree).toEqual({
@@ -172,36 +172,37 @@ describe("buildTokenTree", () => {
 
 describe("filterByType", () => {
   const vars: ExportedVariable[] = [
-    { path: ["color", "red"], value: "#ff0000", type: "color" },
-    { path: ["spacing", "sm"], value: "0.5rem", type: "spacing" },
-    { path: ["cornerRadius", "md"], value: "{size.400}", type: "spacing" },
+    { path: ["color", "red"], value: "#ff0000", type: "color", filterCategory: "color" },
+    { path: ["spacing", "sm"], value: "0.5rem", type: "spacing", filterCategory: "spacing" },
+    { path: ["cornerRadius", "md"], value: "{size.400}", type: "spacing", filterCategory: "cornerRadius" },
   ];
 
   it("returns all when filter is All", () => {
     expect(filterByType(vars, "All")).toHaveLength(3);
   });
 
-  it("filters by specific type", () => {
+  it("spacing filter shows only spacing tokens, NOT cornerRadius", () => {
     const result = filterByType(vars, "spacing");
-    expect(result).toHaveLength(2);
-    expect(result.every((v) => v.type === "spacing")).toBe(true);
+    expect(result).toHaveLength(1);
+    expect(result[0].path[0]).toBe("spacing");
   });
 
-  it("spacing filter includes cornerRadius tokens", () => {
-    const result = filterByType(vars, "spacing");
-    expect(result.some((v) => v.path[0] === "cornerRadius")).toBe(true);
+  it("cornerRadius filter shows only cornerRadius tokens", () => {
+    const result = filterByType(vars, "cornerRadius");
+    expect(result).toHaveLength(1);
+    expect(result[0].path[0]).toBe("cornerRadius");
   });
 });
 
 describe("collectTypeFilterOptions", () => {
-  it("returns sorted unique types", () => {
+  it("returns sorted unique categories including cornerRadius", () => {
     const vars: ExportedVariable[] = [
-      { path: ["a"], value: "0.5rem", type: "spacing" },
-      { path: ["b"], value: "#f00", type: "color" },
-      { path: ["c"], value: "0.5rem", type: "spacing" },
-      { path: ["d"], value: "0.9375rem", type: "fontSize" },
+      { path: ["spacing", "sm"], value: "0.5rem", type: "spacing", filterCategory: "spacing" },
+      { path: ["color", "red"], value: "#f00", type: "color", filterCategory: "color" },
+      { path: ["cornerRadius", "sm"], value: "{size.300}", type: "spacing", filterCategory: "cornerRadius" },
+      { path: ["fontSize", "base"], value: "0.9375rem", type: "fontSize", filterCategory: "fontSize" },
     ];
-    expect(collectTypeFilterOptions(vars)).toEqual(["color", "fontSize", "spacing"]);
+    expect(collectTypeFilterOptions(vars)).toEqual(["color", "cornerRadius", "fontSize", "spacing"]);
   });
 });
 
@@ -375,6 +376,86 @@ describe("processVariables — Crayons patterns", () => {
     const parsed = JSON.parse(result.jsonString);
     expect(parsed.color.icon.brand.value).toBe("{color.pink.600}");
     expect(parsed.color.icon.brand.type).toBe("color");
+  });
+
+  it("separates cornerRadius and spacing in type filter options", () => {
+    const sizeVar = makeVariable("size/300", "FLOAT", 12);
+    const vars = [
+      makeVariable("spacing/padding/sm", "FLOAT", makeAlias(sizeVar.id)),
+      makeVariable("cornerRadius/small", "FLOAT", makeAlias(sizeVar.id)),
+      makeVariable("color/primary", "COLOR", { r: 1, g: 0, b: 0, a: 1 }),
+    ];
+    const allById = new Map([
+      [sizeVar.id, sizeVar],
+      ...vars.map((v) => [v.id, v] as [string, VariableData]),
+    ]);
+
+    const result = processVariables({
+      variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "Style",
+      typeFilter: "All",
+      allVariablesById: allById,
+    });
+
+    expect(result.typeFilterOptions).toContain("spacing");
+    expect(result.typeFilterOptions).toContain("cornerRadius");
+    expect(result.typeFilterOptions).toContain("color");
+
+    // Spacing filter should NOT include cornerRadius
+    const spacingOnly = processVariables({
+      variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "Style",
+      typeFilter: "spacing",
+      allVariablesById: allById,
+    });
+    expect(spacingOnly.variableCount).toBe(1);
+    const spacingParsed = JSON.parse(spacingOnly.jsonString);
+    expect(spacingParsed.spacing).toBeDefined();
+    expect(spacingParsed.cornerRadius).toBeUndefined();
+
+    // cornerRadius filter should show only cornerRadius
+    const cornerOnly = processVariables({
+      variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "Style",
+      typeFilter: "cornerRadius",
+      allVariablesById: allById,
+    });
+    expect(cornerOnly.variableCount).toBe(1);
+    const cornerParsed = JSON.parse(cornerOnly.jsonString);
+    expect(cornerParsed.cornerRadius).toBeDefined();
+    expect(cornerParsed.spacing).toBeUndefined();
+  });
+
+  it("space-separated 'corner radius' tokens appear under cornerRadius filter", () => {
+    const vars = [
+      makeVariable("corner radius/small", "FLOAT", 8),
+      makeVariable("corner radius/medium", "FLOAT", 12),
+      makeVariable("spacing/gap/sm", "FLOAT", 4),
+    ];
+    const allById = new Map(vars.map((v) => [v.id, v]));
+
+    const result = processVariables({
+      variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "Style",
+      typeFilter: "All",
+      allVariablesById: allById,
+    });
+
+    expect(result.typeFilterOptions).toContain("cornerRadius");
+    expect(result.typeFilterOptions).toContain("spacing");
+
+    const cornerOnly = processVariables({
+      variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "Style",
+      typeFilter: "cornerRadius",
+      allVariablesById: allById,
+    });
+    expect(cornerOnly.variableCount).toBe(2);
   });
 
   it("handles mixed token collections", () => {
@@ -626,8 +707,8 @@ describe("processVariables — Crayons patterns", () => {
 describe("tokenTreeToJson", () => {
   it("produces identical output for preview, copy, and download", () => {
     const vars: ExportedVariable[] = [
-      { path: ["color", "red"], value: "#ff0000", type: "color" },
-      { path: ["spacing", "sm"], value: "0.25rem", type: "spacing" },
+      { path: ["color", "red"], value: "#ff0000", type: "color", filterCategory: "color" },
+      { path: ["spacing", "sm"], value: "0.25rem", type: "spacing", filterCategory: "spacing" },
     ];
     const tree = sortTokenTree(buildTokenTree(vars));
     const json = tokenTreeToJson(tree);
@@ -643,8 +724,8 @@ describe("tokenTreeToJson", () => {
 describe("sortTokenTree", () => {
   it("sorts keys alphabetically", () => {
     const tree = buildTokenTree([
-      { path: ["z", "b"], value: "0.5rem", type: "spacing" },
-      { path: ["a", "c"], value: "1rem", type: "spacing" },
+      { path: ["z", "b"], value: "0.5rem", type: "spacing", filterCategory: "spacing" },
+      { path: ["a", "c"], value: "1rem", type: "spacing", filterCategory: "spacing" },
     ]);
     const sorted = sortTokenTree(tree);
     const keys = Object.keys(sorted);
@@ -655,8 +736,8 @@ describe("sortTokenTree", () => {
 describe("validateTreeForConflicts", () => {
   it("detects leaf/group conflict", () => {
     const vars: ExportedVariable[] = [
-      { path: ["color"], value: "#fff", type: "color" },
-      { path: ["color", "red"], value: "#f00", type: "color" },
+      { path: ["color"], value: "#fff", type: "color", filterCategory: "color" },
+      { path: ["color", "red"], value: "#f00", type: "color", filterCategory: "color" },
     ];
     const diagnostics = validateTreeForConflicts(vars);
     expect(diagnostics.length).toBeGreaterThan(0);
@@ -664,8 +745,8 @@ describe("validateTreeForConflicts", () => {
 
   it("passes for clean tree", () => {
     const vars: ExportedVariable[] = [
-      { path: ["color", "red"], value: "#f00", type: "color" },
-      { path: ["color", "blue"], value: "#00f", type: "color" },
+      { path: ["color", "red"], value: "#f00", type: "color", filterCategory: "color" },
+      { path: ["color", "blue"], value: "#00f", type: "color", filterCategory: "color" },
     ];
     const diagnostics = validateTreeForConflicts(vars);
     expect(diagnostics).toHaveLength(0);
