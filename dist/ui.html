@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: Inter, "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    color: #333;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* Header */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 16px 20px 12px;
+  }
+  .header-left h1 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a1a;
+    line-height: 1.3;
+  }
+  .header-left .subtitle {
+    font-size: 12px;
+    color: #4d7cff;
+    background: #eef3ff;
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    margin-top: 2px;
+    font-weight: 500;
+  }
+  .header-right {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+
+  /* Buttons */
+  .btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: opacity 0.15s;
+  }
+  .btn:hover { opacity: 0.85; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-primary {
+    background: #4d7cff;
+    color: #fff;
+  }
+  .btn-outline {
+    background: #fff;
+    color: #333;
+    border: 1px solid #d0d0d0;
+  }
+  .btn-sm {
+    padding: 6px 14px;
+    font-size: 12px;
+  }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: #e5e5e5;
+    margin: 0 20px;
+  }
+
+  /* Variable count */
+  .var-count {
+    padding: 12px 20px 8px;
+    font-size: 13px;
+    color: #666;
+  }
+  .var-count strong {
+    color: #333;
+  }
+
+  /* Export panel */
+  .export-panel {
+    margin: 0 20px 16px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border-bottom: 1px solid #e8e8e8;
+    background: #fafafa;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+
+  .toolbar select {
+    padding: 6px 28px 6px 10px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: inherit;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%23666' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    min-width: 80px;
+  }
+  .toolbar select:focus {
+    outline: 2px solid #4d7cff;
+    outline-offset: -1px;
+  }
+  .toolbar select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .toolbar-spacer { flex: 1; }
+
+  /* JSON preview */
+  .json-preview {
+    flex: 1;
+    overflow: auto;
+    padding: 12px 16px;
+    background: #fff;
+  }
+  .json-preview pre {
+    font-family: "SF Mono", "Fira Code", "Fira Mono", Menlo, Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #333;
+    white-space: pre;
+    margin: 0;
+  }
+
+  /* Empty & error states */
+  .empty-state {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    color: #999;
+    font-size: 13px;
+    padding: 24px;
+    text-align: center;
+  }
+
+  .diagnostics {
+    padding: 8px 12px;
+    background: #fff8e5;
+    border-top: 1px solid #e8e8e8;
+    max-height: 100px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .diagnostics .diag-item {
+    font-size: 11px;
+    padding: 2px 0;
+    color: #996600;
+  }
+  .diagnostics .diag-item.error {
+    color: #cc3333;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%) translateY(60px);
+    background: #333;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    pointer-events: none;
+    opacity: 0;
+    transition: transform 0.2s ease, opacity 0.2s ease;
+    z-index: 100;
+  }
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+
+  /* Loading overlay */
+  .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255,255,255,0.7);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    font-size: 13px;
+    color: #666;
+  }
+  .loading-overlay.visible {
+    display: flex;
+  }
+
+  /* Collection icon badges */
+  .collection-label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+</style>
+</head>
+<body>
+  <div class="header">
+    <div class="header-left">
+      <h1>Var2JSON</h1>
+      <span class="subtitle">Export LUMI Variables to JSON</span>
+    </div>
+    <div class="header-right">
+      <button class="btn btn-primary" id="refreshBtn">Refresh Variables</button>
+      <button class="btn btn-outline" id="closeBtn">Close Plugin</button>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="var-count" id="varCount">Found 0 variables</div>
+
+  <div class="export-panel" style="position: relative;">
+    <div class="toolbar">
+      <select id="collectionSelect" disabled></select>
+      <select id="modeSelect" disabled></select>
+      <select id="typeFilterSelect" disabled>
+        <option value="All">All</option>
+      </select>
+      <div class="toolbar-spacer"></div>
+      <button class="btn btn-outline btn-sm" id="copyBtn" disabled>Copy</button>
+      <button class="btn btn-outline btn-sm" id="downloadBtn" disabled>Download</button>
+    </div>
+
+    <div class="json-preview" id="jsonPreview">
+      <div class="empty-state" id="emptyState">No variables found. Open a file with local variable collections.</div>
+      <pre id="jsonContent" style="display:none;"></pre>
+    </div>
+
+    <div class="diagnostics" id="diagnosticsPanel" style="display:none;"></div>
+
+    <div class="loading-overlay" id="loadingOverlay">Loading...</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>"use strict";
+(() => {
+  // src/ui-script.ts
+  var collectionSelect = document.getElementById("collectionSelect");
+  var modeSelect = document.getElementById("modeSelect");
+  var typeFilterSelect = document.getElementById("typeFilterSelect");
+  var copyBtn = document.getElementById("copyBtn");
+  var downloadBtn = document.getElementById("downloadBtn");
+  var refreshBtn = document.getElementById("refreshBtn");
+  var closeBtn = document.getElementById("closeBtn");
+  var jsonPreview = document.getElementById("jsonContent");
+  var emptyState = document.getElementById("emptyState");
+  var varCount = document.getElementById("varCount");
+  var diagnosticsPanel = document.getElementById("diagnosticsPanel");
+  var loadingOverlay = document.getElementById("loadingOverlay");
+  var toast = document.getElementById("toast");
+  var collections = [];
+  var currentJsonString = "";
+  var isLoading = false;
+  function postMessage(msg) {
+    parent.postMessage({ pluginMessage: msg }, "*");
+  }
+  function showToast(message) {
+    toast.textContent = message;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2e3);
+  }
+  function setLoading(loading) {
+    isLoading = loading;
+    loadingOverlay.classList.toggle("visible", loading);
+    collectionSelect.disabled = loading || collections.length === 0;
+    modeSelect.disabled = loading || collections.length === 0;
+    typeFilterSelect.disabled = loading || collections.length === 0;
+    copyBtn.disabled = loading || !currentJsonString;
+    downloadBtn.disabled = loading || !currentJsonString;
+  }
+  function updateCollectionDropdown() {
+    collectionSelect.innerHTML = "";
+    for (const c of collections) {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.name;
+      collectionSelect.appendChild(opt);
+    }
+    collectionSelect.disabled = collections.length === 0;
+  }
+  function updateModeDropdown(collectionId) {
+    const collection = collections.find((c) => c.id === collectionId);
+    modeSelect.innerHTML = "";
+    if (!collection) {
+      modeSelect.disabled = true;
+      return;
+    }
+    for (const m of collection.modes) {
+      const opt = document.createElement("option");
+      opt.value = m.modeId;
+      opt.textContent = m.name;
+      modeSelect.appendChild(opt);
+    }
+    modeSelect.value = collection.defaultModeId;
+    modeSelect.disabled = collection.modes.length <= 1;
+  }
+  function updateTypeFilter(options, preserveSelection) {
+    const previousValue = typeFilterSelect.value;
+    typeFilterSelect.innerHTML = "";
+    const allOpt = document.createElement("option");
+    allOpt.value = "All";
+    allOpt.textContent = "All";
+    typeFilterSelect.appendChild(allOpt);
+    for (const opt of options) {
+      const el = document.createElement("option");
+      el.value = opt;
+      el.textContent = opt;
+      typeFilterSelect.appendChild(el);
+    }
+    if (preserveSelection && options.includes(previousValue)) {
+      typeFilterSelect.value = previousValue;
+    } else {
+      typeFilterSelect.value = "All";
+    }
+    typeFilterSelect.disabled = options.length === 0;
+  }
+  function renderDiagnostics(diagnostics) {
+    if (diagnostics.length === 0) {
+      diagnosticsPanel.style.display = "none";
+      return;
+    }
+    diagnosticsPanel.style.display = "block";
+    diagnosticsPanel.innerHTML = diagnostics.map(
+      (d) => `<div class="diag-item ${d.severity}">${d.severity === "error" ? "\u2716" : "\u26A0"} <strong>${escapeHtml(d.variableName)}</strong>: ${escapeHtml(d.message)}</div>`
+    ).join("");
+  }
+  function escapeHtml(str) {
+    return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  function renderJson(jsonString, count) {
+    currentJsonString = jsonString;
+    if (count === 0 && jsonString.trim() === "{}\n") {
+      jsonPreview.style.display = "none";
+      emptyState.style.display = "flex";
+      emptyState.textContent = "No variables match the current filter.";
+      varCount.innerHTML = `Found <strong>0</strong> variables`;
+    } else {
+      jsonPreview.style.display = "block";
+      emptyState.style.display = "none";
+      jsonPreview.textContent = jsonString;
+      varCount.innerHTML = `Found <strong>${count}</strong> variables`;
+    }
+    copyBtn.disabled = !currentJsonString || isLoading;
+    downloadBtn.disabled = !currentJsonString || isLoading;
+  }
+  function getFilename() {
+    const collectionName = collectionSelect.options[collectionSelect.selectedIndex]?.textContent || "export";
+    const modeName = modeSelect.options[modeSelect.selectedIndex]?.textContent || "";
+    const sanitize = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    const parts = ["lumi", sanitize(collectionName)];
+    if (modeName) parts.push(sanitize(modeName));
+    return parts.filter(Boolean).join("-") + ".json";
+  }
+  collectionSelect.addEventListener("change", () => {
+    const collectionId = collectionSelect.value;
+    updateModeDropdown(collectionId);
+    postMessage({ type: "select-collection", collectionId });
+  });
+  modeSelect.addEventListener("change", () => {
+    postMessage({ type: "select-mode", modeId: modeSelect.value });
+  });
+  typeFilterSelect.addEventListener("change", () => {
+    postMessage({ type: "select-type-filter", typeFilter: typeFilterSelect.value });
+  });
+  copyBtn.addEventListener("click", () => {
+    if (!currentJsonString) return;
+    const textarea = document.createElement("textarea");
+    textarea.value = currentJsonString;
+    textarea.style.position = "fixed";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+      document.execCommand("copy");
+      showToast("Copied to clipboard");
+    } catch {
+      navigator.clipboard.writeText(currentJsonString).then(
+        () => showToast("Copied to clipboard"),
+        () => showToast("Copy failed")
+      );
+    } finally {
+      document.body.removeChild(textarea);
+    }
+  });
+  downloadBtn.addEventListener("click", () => {
+    if (!currentJsonString) return;
+    const blob = new Blob([currentJsonString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = getFilename();
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast(`Downloaded ${a.download}`);
+  });
+  refreshBtn.addEventListener("click", () => {
+    postMessage({ type: "refresh" });
+  });
+  closeBtn.addEventListener("click", () => {
+    postMessage({ type: "close" });
+  });
+  window.onmessage = (event) => {
+    const msg = event.data.pluginMessage;
+    if (!msg) return;
+    switch (msg.type) {
+      case "collections-loaded": {
+        collections = msg.collections;
+        updateCollectionDropdown();
+        if (collections.length > 0) {
+          updateModeDropdown(collections[0].id);
+        } else {
+          modeSelect.innerHTML = "";
+          modeSelect.disabled = true;
+          jsonPreview.style.display = "none";
+          emptyState.style.display = "flex";
+          emptyState.textContent = "No variable collections found in this file.";
+          varCount.innerHTML = `Found <strong>0</strong> variables`;
+        }
+        break;
+      }
+      case "export-result": {
+        const { jsonString, variableCount, diagnostics, typeFilterOptions } = msg.result;
+        updateTypeFilter(typeFilterOptions, true);
+        renderJson(jsonString, variableCount);
+        renderDiagnostics(diagnostics);
+        break;
+      }
+      case "loading":
+        setLoading(msg.loading);
+        break;
+      case "error":
+        showToast(msg.message);
+        break;
+    }
+  };
+  postMessage({ type: "init" });
+})();
+</script>
+</body>
+</html>
