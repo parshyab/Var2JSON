@@ -55,6 +55,15 @@ describe("resolveTokenType", () => {
     expect(resolveTokenType(["border radius", "lg"], "FLOAT")).toBe("spacing");
   });
 
+  // Hyphenated Figma variable names
+  it("resolves hyphenated 'corner-radius' as spacing", () => {
+    expect(resolveTokenType(["corner-radius", "sm"], "FLOAT")).toBe("spacing");
+  });
+
+  it("resolves underscore 'corner_radius' as spacing", () => {
+    expect(resolveTokenType(["corner_radius", "md"], "FLOAT")).toBe("spacing");
+  });
+
   // Size → spacing (Crayons pattern: size/* has type "spacing")
   it("resolves size/* as spacing (Crayons pattern)", () => {
     expect(resolveTokenType(["size", "200"], "FLOAT")).toBe("spacing");
@@ -104,6 +113,45 @@ describe("resolveTokenType", () => {
     expect(resolveTokenType(["typography", "letterSpacing", "lsNegthree"], "FLOAT")).toBe("letterSpacing");
   });
 
+  // Multi-segment font/size, font/weight, font/height (Figma split paths)
+  it("resolves font/size/* as fontSize (two segments)", () => {
+    expect(resolveTokenType(["font", "size", "scale 6 (28)"], "FLOAT")).toBe("fontSize");
+    expect(resolveTokenType(["font", "size", "scale 5 (25)"], "FLOAT")).toBe("fontSize");
+  });
+
+  it("resolves font/weight/* as fontWeight (two segments)", () => {
+    expect(resolveTokenType(["font", "weight", "bold"], "FLOAT")).toBe("fontWeight");
+  });
+
+  it("resolves font/height/* as lineHeight (two segments)", () => {
+    expect(resolveTokenType(["font", "height", "normal"], "FLOAT")).toBe("lineHeight");
+  });
+
+  it("resolves font/family/* as fontFamily (two segments)", () => {
+    expect(resolveTokenType(["font", "family", "inter"], "STRING")).toBe("fontFamily");
+  });
+
+  // Hyphenated typography names
+  it("resolves typography/font-size as fontSize", () => {
+    expect(resolveTokenType(["typography", "font-size"], "FLOAT")).toBe("fontSize");
+  });
+
+  it("resolves typography/font-weight as fontWeight", () => {
+    expect(resolveTokenType(["typography", "font-weight"], "FLOAT")).toBe("fontWeight");
+  });
+
+  it("resolves typography/font-height as lineHeight", () => {
+    expect(resolveTokenType(["typography", "font-height"], "FLOAT")).toBe("lineHeight");
+  });
+
+  it("resolves typography/line-height as lineHeight", () => {
+    expect(resolveTokenType(["typography", "line-height"], "FLOAT")).toBe("lineHeight");
+  });
+
+  it("resolves typography/letter-spacing as letterSpacing", () => {
+    expect(resolveTokenType(["typography", "letter-spacing"], "FLOAT")).toBe("letterSpacing");
+  });
+
   // zIndex
   it("resolves zIndex/* as zIndex", () => {
     expect(resolveTokenType(["zIndex", "modal"], "FLOAT")).toBe("zIndex");
@@ -144,7 +192,7 @@ describe("resolveTokenType", () => {
     expect(resolveTokenType(["description"], "STRING")).toBe("string");
   });
 
-  it("returns null for ambiguous FLOAT", () => {
+  it("returns null for ambiguous FLOAT from resolveTokenType (path-only)", () => {
     expect(resolveTokenType(["unknownThing"], "FLOAT")).toBeNull();
   });
 
@@ -159,6 +207,16 @@ describe("resolveTokenType", () => {
   it("matches case-insensitively", () => {
     expect(resolveTokenType(["CornerRadius", "Brand"], "FLOAT")).toBe("spacing");
     expect(resolveTokenType(["COLOR", "PRIMARY"], "COLOR")).toBe("color");
+  });
+});
+
+describe("resolveTokenTypeFromCollection — FLOAT fallback", () => {
+  it("resolves unknown FLOAT as number (never null)", () => {
+    expect(resolveTokenTypeFromCollection(["unknownThing"], "FLOAT", "Custom")).toBe("number");
+  });
+
+  it("resolves unknown FLOAT in typography collection as number", () => {
+    expect(resolveTokenTypeFromCollection(["customProp"], "FLOAT", "Typography")).toBe("number");
   });
 });
 

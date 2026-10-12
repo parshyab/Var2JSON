@@ -32,24 +32,33 @@ const SEMANTIC_RULES: TokenTypeRule[] = [
 
   { segments: ["typography", "fontSize"], matchPosition: "prefix", type: "fontSize" },
   { segments: ["fontSize"], matchPosition: "any", type: "fontSize" },
+  { segments: ["font", "size"], matchPosition: "any", type: "fontSize" },
 
   { segments: ["typography", "fontFamily"], matchPosition: "prefix", type: "fontFamily" },
   { segments: ["fontFamily"], matchPosition: "any", type: "fontFamily" },
+  { segments: ["font", "family"], matchPosition: "any", type: "fontFamily" },
 
   { segments: ["typography", "fontWeight"], matchPosition: "prefix", type: "fontWeight" },
   { segments: ["fontWeight"], matchPosition: "any", type: "fontWeight" },
+  { segments: ["font", "weight"], matchPosition: "any", type: "fontWeight" },
 
   { segments: ["typography", "lineHeight"], matchPosition: "prefix", type: "lineHeight" },
   { segments: ["lineHeight"], matchPosition: "any", type: "lineHeight" },
+  { segments: ["line", "height"], matchPosition: "any", type: "lineHeight" },
+  { segments: ["fontheight"], matchPosition: "any", type: "lineHeight" },
+  { segments: ["font", "height"], matchPosition: "any", type: "lineHeight" },
 
   { segments: ["typography", "letterSpacing"], matchPosition: "prefix", type: "letterSpacing" },
   { segments: ["letterSpacing"], matchPosition: "any", type: "letterSpacing" },
+  { segments: ["letter", "spacing"], matchPosition: "any", type: "letterSpacing" },
 
   { segments: ["typography", "paragraphSpacing"], matchPosition: "prefix", type: "paragraphSpacing" },
   { segments: ["paragraphSpacing"], matchPosition: "any", type: "paragraphSpacing" },
+  { segments: ["paragraph", "spacing"], matchPosition: "any", type: "paragraphSpacing" },
 
   { segments: ["typography", "paragraphIndent"], matchPosition: "prefix", type: "paragraphIndent" },
   { segments: ["paragraphIndent"], matchPosition: "any", type: "paragraphIndent" },
+  { segments: ["paragraph", "indent"], matchPosition: "any", type: "paragraphIndent" },
 
   { segments: ["borderWidth"], matchPosition: "any", type: "borderWidth" },
   { segments: ["strokeWidth"], matchPosition: "any", type: "borderWidth" },
@@ -64,7 +73,7 @@ const SEMANTIC_RULES: TokenTypeRule[] = [
 ];
 
 function normalizeSegment(s: string): string {
-  return s.toLowerCase().replace(/\s+/g, "");
+  return s.toLowerCase().replace(/[\s\-_]+/g, "");
 }
 
 function matchesRule(pathSegments: string[], rule: TokenTypeRule): boolean {
@@ -141,15 +150,19 @@ export function resolveTokenTypeFromCollection(
 
   // Collection name heuristic for FLOAT types
   if (figmaResolvedType === "FLOAT") {
-    const lowerCollection = collectionName.toLowerCase();
-    if (lowerCollection.includes("spacing") || lowerCollection === "_spacing") return "spacing";
+    const lowerCollection = normalizeSegment(collectionName);
+    if (lowerCollection.includes("spacing") || lowerCollection === "spacing") return "spacing";
     if (lowerCollection.includes("size") || lowerCollection.includes("sizing")) return "sizing";
     if (lowerCollection.includes("breakpoint")) return "sizing";
     if (lowerCollection.includes("radius")) return "spacing";
     if (lowerCollection.includes("opacity")) return "opacity";
     if (lowerCollection.includes("border")) return "borderWidth";
     if (lowerCollection.includes("duration") || lowerCollection.includes("motion")) return "duration";
+    if (lowerCollection.includes("typography")) return "number";
   }
+
+  // Last resort: use Figma resolved type as a generic fallback
+  if (figmaResolvedType === "FLOAT") return "number";
 
   return null;
 }
