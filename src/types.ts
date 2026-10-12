@@ -54,6 +54,7 @@ export interface ExportedVariable {
   path: string[];
   value: string | number | boolean | null;
   type: ExportTokenType;
+  filterCategory: string;
 }
 
 export interface ExportDiagnostic {

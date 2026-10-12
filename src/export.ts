@@ -9,6 +9,7 @@ import type {
 import { isTokenLeaf } from "./types";
 import {
   resolveTokenTypeFromCollection,
+  resolveFilterCategory,
   DEFAULT_VALUE_FORMAT,
   type ValueFormatConfig,
 } from "./config";
@@ -153,15 +154,15 @@ export function filterByType(
   typeFilter: string
 ): ExportedVariable[] {
   if (typeFilter === "All") return variables;
-  return variables.filter((v) => v.type === typeFilter);
+  return variables.filter((v) => v.filterCategory === typeFilter);
 }
 
 export function collectTypeFilterOptions(variables: ExportedVariable[]): string[] {
-  const types = new Set<string>();
+  const categories = new Set<string>();
   for (const v of variables) {
-    types.add(v.type);
+    categories.add(v.filterCategory);
   }
-  return Array.from(types).sort();
+  return Array.from(categories).sort();
 }
 
 export function sortTokenTree(node: TokenNode): TokenNode {
@@ -279,6 +280,8 @@ export function processVariables(input: ProcessVariablesInput): ExportResult {
       continue;
     }
 
+    const filterCategory = resolveFilterCategory(path, tokenType);
+
     if (isVariableAlias(rawValue)) {
       const targetVariable = allVariablesById.get(rawValue.id);
       if (!targetVariable) {
@@ -297,6 +300,7 @@ export function processVariables(input: ProcessVariablesInput): ExportResult {
         path,
         value: aliasReference,
         type: tokenType,
+        filterCategory,
       });
     } else {
       const formattedValue = formatValue(rawValue, tokenType, valueConfig);
@@ -314,6 +318,7 @@ export function processVariables(input: ProcessVariablesInput): ExportResult {
         path,
         value: formattedValue,
         type: tokenType,
+        filterCategory,
       });
     }
   }
