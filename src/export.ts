@@ -39,22 +39,36 @@ function isRGBAColor(value: unknown): value is RGBAColor {
   );
 }
 
-function colorToString(color: RGBAColor, format: "hex" | "rgba"): string {
+function colorToString(color: RGBAColor, format: "hex" | "hex8" | "rgba"): string {
   const r = Math.round(color.r * 255);
   const g = Math.round(color.g * 255);
   const b = Math.round(color.b * 255);
   const a = color.a;
 
-  if (a < 1) {
-    return `rgba(${r}, ${g}, ${b}, ${a})`;
-  }
-
   if (format === "rgba") {
+    if (a < 1) {
+      return `rgba(${r}, ${g}, ${b}, ${a})`;
+    }
     return `rgba(${r}, ${g}, ${b}, 1)`;
   }
 
-  const hex = `#${r.toString(16).padStart(2, "0")}${g.toString(16).padStart(2, "0")}${b.toString(16).padStart(2, "0")}`;
-  return hex.toLowerCase();
+  const hexR = r.toString(16).padStart(2, "0");
+  const hexG = g.toString(16).padStart(2, "0");
+  const hexB = b.toString(16).padStart(2, "0");
+
+  if (a < 1) {
+    const hexA = Math.round(a * 255).toString(16).padStart(2, "0");
+    return `#${hexR}${hexG}${hexB}${hexA}`.toLowerCase();
+  }
+
+  return `#${hexR}${hexG}${hexB}`.toLowerCase();
+}
+
+function numberToUnitString(value: number, unit: "rem" | "px" | "none", rootFontSize: number): string | number {
+  if (value === 0) return "0";
+  if (unit === "rem") return `${value / rootFontSize}rem`;
+  if (unit === "px") return `${value}px`;
+  return value;
 }
 
 export function formatValue(
@@ -76,22 +90,19 @@ export function formatValue(
       case "color":
         return rawValue;
       case "fontWeight":
-        return rawValue;
+        return config.fontWeightFormat === "string" ? String(rawValue) : rawValue;
       case "opacity":
         return config.opacityScale === "0-1" ? rawValue : rawValue * 100;
       case "fontSize":
-        if (config.useRemForFontSize) {
-          return `${rawValue / config.rootFontSize}rem`;
-        }
-        return rawValue;
+        return numberToUnitString(rawValue, config.fontSizeUnit, config.rootFontSize);
       case "lineHeight":
-        return rawValue;
+        return numberToUnitString(rawValue, config.lineHeightUnit, config.rootFontSize);
       case "letterSpacing":
-        return rawValue;
+        return config.letterSpacingFormat === "string" ? String(rawValue) : rawValue;
       case "spacing":
-        return config.usePxForSpacing ? `${rawValue}px` : rawValue;
+        return numberToUnitString(rawValue, config.spacingUnit, config.rootFontSize);
       case "sizing":
-        return config.usePxForSizing ? `${rawValue}px` : rawValue;
+        return numberToUnitString(rawValue, config.spacingUnit, config.rootFontSize);
       case "duration":
         if (config.durationUnit === "s") return `${rawValue / 1000}s`;
         return `${rawValue}ms`;
@@ -99,6 +110,8 @@ export function formatValue(
         return rawValue;
       case "paragraphSpacing":
       case "paragraphIndent":
+        return rawValue;
+      case "zIndex":
         return rawValue;
       default:
         return rawValue;

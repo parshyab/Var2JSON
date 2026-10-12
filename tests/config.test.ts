@@ -44,18 +44,21 @@ describe("resolveTokenType", () => {
     expect(resolveTokenType(["component", "card", "cornerRadius", "default"], "FLOAT")).toBe("spacing");
   });
 
-  // Sizing
-  it("resolves size/* as sizing", () => {
-    expect(resolveTokenType(["size", "200"], "FLOAT")).toBe("sizing");
+  // Size → spacing (Crayons pattern: size/* has type "spacing")
+  it("resolves size/* as spacing (Crayons pattern)", () => {
+    expect(resolveTokenType(["size", "200"], "FLOAT")).toBe("spacing");
+    expect(resolveTokenType(["size", "max"], "FLOAT")).toBe("spacing");
+    expect(resolveTokenType(["size", "0"], "FLOAT")).toBe("spacing");
   });
 
+  // Sizing (explicit sizing prefix)
   it("resolves sizing/* as sizing", () => {
     expect(resolveTokenType(["sizing", "icon"], "FLOAT")).toBe("sizing");
   });
 
   // Typography
   it("resolves typography/fontSize/* as fontSize", () => {
-    expect(resolveTokenType(["typography", "fontSize", "scale0"], "FLOAT")).toBe("fontSize");
+    expect(resolveTokenType(["typography", "fontSize", "scaleZero"], "FLOAT")).toBe("fontSize");
   });
 
   it("resolves fontSize/* as fontSize", () => {
@@ -78,8 +81,22 @@ describe("resolveTokenType", () => {
     expect(resolveTokenType(["lineHeight", "normal"], "FLOAT")).toBe("lineHeight");
   });
 
+  it("resolves typography/lineHeight/* as lineHeight", () => {
+    expect(resolveTokenType(["typography", "lineHeight", "lhOne"], "FLOAT")).toBe("lineHeight");
+  });
+
   it("resolves letterSpacing/* as letterSpacing", () => {
     expect(resolveTokenType(["letterSpacing", "tight"], "FLOAT")).toBe("letterSpacing");
+  });
+
+  it("resolves typography/letterSpacing/* as letterSpacing", () => {
+    expect(resolveTokenType(["typography", "letterSpacing", "lsNegthree"], "FLOAT")).toBe("letterSpacing");
+  });
+
+  // zIndex
+  it("resolves zIndex/* as zIndex", () => {
+    expect(resolveTokenType(["zIndex", "modal"], "FLOAT")).toBe("zIndex");
+    expect(resolveTokenType(["zIndex", "blanket"], "FLOAT")).toBe("zIndex");
   });
 
   // Other types
@@ -93,6 +110,14 @@ describe("resolveTokenType", () => {
 
   it("resolves duration/* as duration", () => {
     expect(resolveTokenType(["duration", "fast"], "FLOAT")).toBe("duration");
+  });
+
+  // Semantic typography paths (heading/section/fontSize etc.)
+  it("resolves deeply nested typography leaf segments", () => {
+    expect(resolveTokenType(["typography", "heading", "section", "fontSize"], "FLOAT")).toBe("fontSize");
+    expect(resolveTokenType(["typography", "heading", "section", "fontWeight"], "FLOAT")).toBe("fontWeight");
+    expect(resolveTokenType(["typography", "heading", "section", "lineHeight"], "FLOAT")).toBe("lineHeight");
+    expect(resolveTokenType(["typography", "heading", "section", "letterSpacing"], "FLOAT")).toBe("letterSpacing");
   });
 
   // Fallback to Figma types

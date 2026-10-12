@@ -22,11 +22,13 @@ const SEMANTIC_RULES: TokenTypeRule[] = [
   { segments: ["padding"], matchPosition: "any", type: "spacing" },
   { segments: ["margin"], matchPosition: "any", type: "spacing" },
 
-  { segments: ["size"], matchPosition: "prefix", type: "sizing" },
+  { segments: ["size"], matchPosition: "prefix", type: "spacing" },
   { segments: ["sizing"], matchPosition: "prefix", type: "sizing" },
   { segments: ["width"], matchPosition: "leaf", type: "sizing" },
   { segments: ["height"], matchPosition: "leaf", type: "sizing" },
   { segments: ["dimensions"], matchPosition: "any", type: "sizing" },
+
+  { segments: ["zIndex"], matchPosition: "prefix", type: "zIndex" },
 
   { segments: ["typography", "fontSize"], matchPosition: "prefix", type: "fontSize" },
   { segments: ["fontSize"], matchPosition: "any", type: "fontSize" },
@@ -150,19 +152,23 @@ export function resolveTokenTypeFromCollection(
 
 export interface ValueFormatConfig {
   rootFontSize: number;
-  usePxForSpacing: boolean;
-  usePxForSizing: boolean;
-  useRemForFontSize: boolean;
+  spacingUnit: "rem" | "px" | "none";
+  fontSizeUnit: "rem" | "px" | "none";
+  lineHeightUnit: "rem" | "px" | "none";
+  fontWeightFormat: "string" | "number";
+  letterSpacingFormat: "string" | "number";
   opacityScale: "0-1" | "0-100";
   durationUnit: "ms" | "s";
-  colorFormat: "hex" | "rgba";
+  colorFormat: "hex" | "hex8" | "rgba";
 }
 
 export const DEFAULT_VALUE_FORMAT: ValueFormatConfig = {
   rootFontSize: 16,
-  usePxForSpacing: false,
-  usePxForSizing: false,
-  useRemForFontSize: false,
+  spacingUnit: "rem",
+  fontSizeUnit: "rem",
+  lineHeightUnit: "rem",
+  fontWeightFormat: "string",
+  letterSpacingFormat: "string",
   opacityScale: "0-1",
   durationUnit: "ms",
   colorFormat: "hex",

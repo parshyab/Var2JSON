@@ -10,10 +10,9 @@ import {
   sortTokenTree,
   validateTreeForConflicts,
   type VariableData,
-  type ProcessVariablesInput,
 } from "../src/export";
-import type { ExportedVariable, ExportTokenType } from "../src/types";
-import { DEFAULT_VALUE_FORMAT } from "../src/config";
+import type { ExportedVariable } from "../src/types";
+import { DEFAULT_VALUE_FORMAT, type ValueFormatConfig } from "../src/config";
 
 describe("variableNameToPath", () => {
   it("splits slash-delimited names", () => {
@@ -39,60 +38,65 @@ describe("pathToAliasReference", () => {
   });
 });
 
-describe("formatValue", () => {
-  it("formats RGBA color as hex", () => {
-    const result = formatValue({ r: 1, g: 0, b: 0, a: 1 }, "color");
-    expect(result).toBe("#ff0000");
+describe("formatValue — Crayons-aligned defaults", () => {
+  it("formats opaque color as 6-digit lowercase hex", () => {
+    expect(formatValue({ r: 0.855, g: 0.004, b: 0.416, a: 1 }, "color")).toBe("#da016a");
   });
 
-  it("formats transparent color as rgba", () => {
-    const result = formatValue({ r: 1, g: 0, b: 0, a: 0.5 }, "color");
-    expect(result).toBe("rgba(255, 0, 0, 0.5)");
+  it("formats transparent color as 8-digit hex", () => {
+    expect(formatValue({ r: 1, g: 1, b: 1, a: 0 }, "color")).toBe("#ffffff00");
+  });
+
+  it("formats partial alpha as 8-digit hex", () => {
+    const result = formatValue({ r: 0.102, g: 0.125, b: 0.2, a: 0.6 }, "color");
+    expect(result).toBe("#1a203399");
   });
 
   it("preserves alpha zero", () => {
-    const result = formatValue({ r: 0, g: 0, b: 0, a: 0 }, "color");
-    expect(result).toBe("rgba(0, 0, 0, 0)");
+    expect(formatValue({ r: 0, g: 0, b: 0, a: 0 }, "color")).toBe("#00000000");
   });
 
-  it("returns fontWeight as plain number", () => {
-    expect(formatValue(600, "fontWeight")).toBe(600);
+  it("formats spacing as rem string (Crayons size pattern)", () => {
+    expect(formatValue(8, "spacing")).toBe("0.5rem");
+    expect(formatValue(16, "spacing")).toBe("1rem");
+    expect(formatValue(4, "spacing")).toBe("0.25rem");
   });
 
-  it("returns spacing as number by default", () => {
-    expect(formatValue(16, "spacing")).toBe(16);
+  it("formats spacing zero as string '0'", () => {
+    expect(formatValue(0, "spacing")).toBe("0");
   });
 
-  it("returns spacing as px when configured", () => {
-    const config = { ...DEFAULT_VALUE_FORMAT, usePxForSpacing: true };
-    expect(formatValue(16, "spacing", config)).toBe("16px");
+  it("formats fontSize as rem string", () => {
+    expect(formatValue(15, "fontSize")).toBe("0.9375rem");
+    expect(formatValue(10, "fontSize")).toBe("0.625rem");
   });
 
-  it("converts fontSize to rem when configured", () => {
-    const config = { ...DEFAULT_VALUE_FORMAT, useRemForFontSize: true, rootFontSize: 16 };
-    expect(formatValue(15, "fontSize", config)).toBe("0.9375rem");
+  it("formats lineHeight as rem string", () => {
+    expect(formatValue(16, "lineHeight")).toBe("1rem");
+    expect(formatValue(24, "lineHeight")).toBe("1.5rem");
   });
 
-  it("returns fontSize as number by default", () => {
-    expect(formatValue(15, "fontSize")).toBe(15);
+  it("formats fontWeight as string number", () => {
+    expect(formatValue(600, "fontWeight")).toBe("600");
+    expect(formatValue(400, "fontWeight")).toBe("400");
+  });
+
+  it("formats letterSpacing as string number", () => {
+    expect(formatValue(-0.4, "letterSpacing")).toBe("-0.4");
+    expect(formatValue(1, "letterSpacing")).toBe("1");
+  });
+
+  it("returns zIndex as raw number", () => {
+    expect(formatValue(4, "zIndex")).toBe(4);
+    expect(formatValue(5, "zIndex")).toBe(5);
   });
 
   it("returns opacity in 0-1 scale by default", () => {
     expect(formatValue(0.5, "opacity")).toBe(0.5);
   });
 
-  it("returns opacity in 0-100 scale when configured", () => {
-    const config = { ...DEFAULT_VALUE_FORMAT, opacityScale: "0-100" as const };
-    expect(formatValue(0.5, "opacity", config)).toBe(50);
-  });
-
   it("returns duration in ms by default", () => {
     expect(formatValue(200, "duration")).toBe("200ms");
-  });
-
-  it("returns duration in seconds when configured", () => {
-    const config = { ...DEFAULT_VALUE_FORMAT, durationUnit: "s" as const };
-    expect(formatValue(200, "duration", config)).toBe("0.2s");
   });
 
   it("returns null for null input", () => {
@@ -103,8 +107,40 @@ describe("formatValue", () => {
     expect(formatValue(true, "boolean")).toBe(true);
   });
 
-  it("passes through strings", () => {
+  it("passes through strings (fontFamily)", () => {
     expect(formatValue("Inter", "fontFamily")).toBe("Inter");
+  });
+});
+
+describe("formatValue — alternative configs", () => {
+  it("formats spacing as px when configured", () => {
+    const config: ValueFormatConfig = { ...DEFAULT_VALUE_FORMAT, spacingUnit: "px" };
+    expect(formatValue(16, "spacing", config)).toBe("16px");
+  });
+
+  it("formats spacing as raw number when none", () => {
+    const config: ValueFormatConfig = { ...DEFAULT_VALUE_FORMAT, spacingUnit: "none" };
+    expect(formatValue(16, "spacing", config)).toBe(16);
+  });
+
+  it("formats fontWeight as number when configured", () => {
+    const config: ValueFormatConfig = { ...DEFAULT_VALUE_FORMAT, fontWeightFormat: "number" };
+    expect(formatValue(600, "fontWeight", config)).toBe(600);
+  });
+
+  it("formats letterSpacing as number when configured", () => {
+    const config: ValueFormatConfig = { ...DEFAULT_VALUE_FORMAT, letterSpacingFormat: "number" };
+    expect(formatValue(-0.4, "letterSpacing", config)).toBe(-0.4);
+  });
+
+  it("formats color as rgba when configured", () => {
+    const config: ValueFormatConfig = { ...DEFAULT_VALUE_FORMAT, colorFormat: "rgba" };
+    expect(formatValue({ r: 1, g: 0, b: 0, a: 0.5 }, "color", config)).toBe("rgba(255, 0, 0, 0.5)");
+  });
+
+  it("formats duration in seconds when configured", () => {
+    const config: ValueFormatConfig = { ...DEFAULT_VALUE_FORMAT, durationUnit: "s" };
+    expect(formatValue(200, "duration", config)).toBe("0.2s");
   });
 });
 
@@ -137,8 +173,8 @@ describe("buildTokenTree", () => {
 describe("filterByType", () => {
   const vars: ExportedVariable[] = [
     { path: ["color", "red"], value: "#ff0000", type: "color" },
-    { path: ["spacing", "sm"], value: 8, type: "spacing" },
-    { path: ["cornerRadius", "md"], value: 12, type: "spacing" },
+    { path: ["spacing", "sm"], value: "0.5rem", type: "spacing" },
+    { path: ["cornerRadius", "md"], value: "{size.400}", type: "spacing" },
   ];
 
   it("returns all when filter is All", () => {
@@ -160,16 +196,16 @@ describe("filterByType", () => {
 describe("collectTypeFilterOptions", () => {
   it("returns sorted unique types", () => {
     const vars: ExportedVariable[] = [
-      { path: ["a"], value: 1, type: "spacing" },
-      { path: ["b"], value: 2, type: "color" },
-      { path: ["c"], value: 3, type: "spacing" },
-      { path: ["d"], value: 4, type: "fontSize" },
+      { path: ["a"], value: "0.5rem", type: "spacing" },
+      { path: ["b"], value: "#f00", type: "color" },
+      { path: ["c"], value: "0.5rem", type: "spacing" },
+      { path: ["d"], value: "0.9375rem", type: "fontSize" },
     ];
     expect(collectTypeFilterOptions(vars)).toEqual(["color", "fontSize", "spacing"]);
   });
 });
 
-describe("processVariables", () => {
+describe("processVariables — Crayons patterns", () => {
   function makeVariable(
     name: string,
     resolvedType: string,
@@ -188,7 +224,7 @@ describe("processVariables", () => {
     return { type: "VARIABLE_ALIAS", id: targetId };
   }
 
-  it("exports colour tokens as color type", () => {
+  it("exports colour tokens with lowercase hex", () => {
     const vars = [makeVariable("color/pink/600", "COLOR", { r: 0.855, g: 0.004, b: 0.416, a: 1 })];
     const allById = new Map(vars.map((v) => [v.id, v]));
 
@@ -200,14 +236,57 @@ describe("processVariables", () => {
       allVariablesById: allById,
     });
 
-    expect(result.variableCount).toBe(1);
     const parsed = JSON.parse(result.jsonString);
     expect(parsed.color.pink["600"].type).toBe("color");
+    expect(parsed.color.pink["600"].value).toBe("#da016a");
+  });
+
+  it("exports transparent color with 8-digit hex", () => {
+    const vars = [makeVariable("color/ash/opacity0", "COLOR", { r: 1, g: 1, b: 1, a: 0 })];
+    const allById = new Map(vars.map((v) => [v.id, v]));
+
+    const result = processVariables({
+      variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "_Primitives",
+      typeFilter: "All",
+      allVariablesById: allById,
+    });
+
+    const parsed = JSON.parse(result.jsonString);
+    expect(parsed.color.ash.opacity0.value).toBe("#ffffff00");
+  });
+
+  it("exports size/* tokens as spacing type with rem values", () => {
+    const vars = [
+      makeVariable("size/200", "FLOAT", 8),
+      makeVariable("size/400", "FLOAT", 16),
+      makeVariable("size/0", "FLOAT", 0),
+    ];
+    const allById = new Map(vars.map((v) => [v.id, v]));
+
+    const result = processVariables({
+      variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "_Primitives",
+      typeFilter: "All",
+      allVariablesById: allById,
+    });
+
+    const parsed = JSON.parse(result.jsonString);
+    expect(parsed.size["200"].value).toBe("0.5rem");
+    expect(parsed.size["200"].type).toBe("spacing");
+    expect(parsed.size["400"].value).toBe("1rem");
+    expect(parsed.size["0"].value).toBe("0");
   });
 
   it("exports spacing tokens as spacing type", () => {
-    const vars = [makeVariable("spacing/small", "FLOAT", 8)];
-    const allById = new Map(vars.map((v) => [v.id, v]));
+    const vars = [makeVariable("spacing/padding/sm", "FLOAT", makeAlias("id-size/200"))];
+    const sizeVar = makeVariable("size/200", "FLOAT", 8);
+    const allById = new Map([
+      [vars[0].id, vars[0]],
+      [sizeVar.id, sizeVar],
+    ]);
 
     const result = processVariables({
       variables: vars,
@@ -218,15 +297,21 @@ describe("processVariables", () => {
     });
 
     const parsed = JSON.parse(result.jsonString);
-    expect(parsed.spacing.small.type).toBe("spacing");
+    expect(parsed.spacing.padding.sm.value).toBe("{size.200}");
+    expect(parsed.spacing.padding.sm.type).toBe("spacing");
   });
 
-  it("exports cornerRadius as spacing type", () => {
-    const vars = [makeVariable("cornerRadius/brand", "FLOAT", 8)];
-    const allById = new Map(vars.map((v) => [v.id, v]));
+  it("exports cornerRadius as spacing type with size alias", () => {
+    const sizeVar = makeVariable("size/max", "FLOAT", 10000);
+    const radiusVar = makeVariable("cornerRadius/brand", "FLOAT", makeAlias(sizeVar.id));
+
+    const allById = new Map([
+      [sizeVar.id, sizeVar],
+      [radiusVar.id, radiusVar],
+    ]);
 
     const result = processVariables({
-      variables: vars,
+      variables: [radiusVar],
       selectedModeId: "mode1",
       collectionName: "Style",
       typeFilter: "All",
@@ -234,6 +319,7 @@ describe("processVariables", () => {
     });
 
     const parsed = JSON.parse(result.jsonString);
+    expect(parsed.cornerRadius.brand.value).toBe("{size.max}");
     expect(parsed.cornerRadius.brand.type).toBe("spacing");
   });
 
@@ -253,7 +339,7 @@ describe("processVariables", () => {
     expect(parsed.borderRadius.large.type).toBe("spacing");
   });
 
-  it("exports radius as spacing type", () => {
+  it("exports nested radius path as spacing type", () => {
     const vars = [makeVariable("component/card/radius/default", "FLOAT", 12)];
     const allById = new Map(vars.map((v) => [v.id, v]));
 
@@ -269,29 +355,7 @@ describe("processVariables", () => {
     expect(parsed.component.card.radius.default.type).toBe("spacing");
   });
 
-  it("preserves alias references with originating token type", () => {
-    const sizeVar = makeVariable("size/200", "FLOAT", 8);
-    const radiusVar = makeVariable("cornerRadius/brand", "FLOAT", makeAlias(sizeVar.id));
-
-    const allById = new Map([
-      [sizeVar.id, sizeVar],
-      [radiusVar.id, radiusVar],
-    ]);
-
-    const result = processVariables({
-      variables: [radiusVar],
-      selectedModeId: "mode1",
-      collectionName: "Style",
-      typeFilter: "All",
-      allVariablesById: allById,
-    });
-
-    const parsed = JSON.parse(result.jsonString);
-    expect(parsed.cornerRadius.brand.value).toBe("{size.200}");
-    expect(parsed.cornerRadius.brand.type).toBe("spacing");
-  });
-
-  it("preserves color alias references", () => {
+  it("preserves alias references — color semantic tokens", () => {
     const pinkVar = makeVariable("color/pink/600", "COLOR", { r: 0.855, g: 0.004, b: 0.416, a: 1 });
     const brandVar = makeVariable("color/icon/brand", "COLOR", makeAlias(pinkVar.id));
 
@@ -316,9 +380,9 @@ describe("processVariables", () => {
   it("handles mixed token collections", () => {
     const vars = [
       makeVariable("color/primary", "COLOR", { r: 0, g: 0, b: 1, a: 1 }),
-      makeVariable("spacing/md", "FLOAT", 16),
+      makeVariable("spacing/padding/md", "FLOAT", 16),
       makeVariable("cornerRadius/sm", "FLOAT", 4),
-      makeVariable("fontSize/base", "FLOAT", 14),
+      makeVariable("typography/fontSize/scaleZero", "FLOAT", 15),
     ];
     const allById = new Map(vars.map((v) => [v.id, v]));
 
@@ -332,25 +396,67 @@ describe("processVariables", () => {
 
     const parsed = JSON.parse(result.jsonString);
     expect(parsed.color.primary.type).toBe("color");
-    expect(parsed.spacing.md.type).toBe("spacing");
+    expect(parsed.spacing.padding.md.type).toBe("spacing");
+    expect(parsed.spacing.padding.md.value).toBe("1rem");
     expect(parsed.cornerRadius.sm.type).toBe("spacing");
-    expect(parsed.fontSize.base.type).toBe("fontSize");
-    expect(result.typeFilterOptions).toContain("color");
-    expect(result.typeFilterOptions).toContain("spacing");
-    expect(result.typeFilterOptions).toContain("fontSize");
+    expect(parsed.cornerRadius.sm.value).toBe("0.25rem");
+    expect(parsed.typography.fontSize.scaleZero.type).toBe("fontSize");
+    expect(parsed.typography.fontSize.scaleZero.value).toBe("0.9375rem");
   });
 
-  it("handles typography values", () => {
+  it("handles typography primitives matching Crayons format", () => {
     const vars = [
-      makeVariable("typography/fontFamily", "STRING", "Inter"),
+      makeVariable("typography/fontFamily/inter", "STRING", "Inter"),
       makeVariable("typography/fontWeight/semiBold", "FLOAT", 600),
-      makeVariable("typography/lineHeight/normal", "FLOAT", 1.5),
-      makeVariable("typography/letterSpacing/tight", "FLOAT", -0.02),
+      makeVariable("typography/lineHeight/lhOne", "FLOAT", 24),
+      makeVariable("typography/letterSpacing/lsNegthree", "FLOAT", -0.4),
+      makeVariable("typography/fontSize/scaleZero", "FLOAT", 15),
     ];
     const allById = new Map(vars.map((v) => [v.id, v]));
 
     const result = processVariables({
       variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "_Primitives",
+      typeFilter: "All",
+      allVariablesById: allById,
+    });
+
+    const parsed = JSON.parse(result.jsonString);
+    expect(parsed.typography.fontFamily.inter.value).toBe("Inter");
+    expect(parsed.typography.fontFamily.inter.type).toBe("fontFamily");
+    expect(parsed.typography.fontWeight.semiBold.value).toBe("600");
+    expect(parsed.typography.fontWeight.semiBold.type).toBe("fontWeight");
+    expect(parsed.typography.lineHeight.lhOne.value).toBe("1.5rem");
+    expect(parsed.typography.lineHeight.lhOne.type).toBe("lineHeight");
+    expect(parsed.typography.letterSpacing.lsNegthree.value).toBe("-0.4");
+    expect(parsed.typography.letterSpacing.lsNegthree.type).toBe("letterSpacing");
+    expect(parsed.typography.fontSize.scaleZero.value).toBe("0.9375rem");
+    expect(parsed.typography.fontSize.scaleZero.type).toBe("fontSize");
+  });
+
+  it("handles typography semantic tokens with aliases", () => {
+    const fontWeightVar = makeVariable("typography/fontWeight/semiBold", "FLOAT", 600);
+    const fontSizeVar = makeVariable("typography/fontSize/scaleZero", "FLOAT", 15);
+
+    const headingFontWeight = makeVariable(
+      "typography/heading/subSection/fontWeight", "FLOAT",
+      makeAlias(fontWeightVar.id)
+    );
+    const headingFontSize = makeVariable(
+      "typography/heading/subSection/fontSize", "FLOAT",
+      makeAlias(fontSizeVar.id)
+    );
+
+    const allById = new Map([
+      [fontWeightVar.id, fontWeightVar],
+      [fontSizeVar.id, fontSizeVar],
+      [headingFontWeight.id, headingFontWeight],
+      [headingFontSize.id, headingFontSize],
+    ]);
+
+    const result = processVariables({
+      variables: [headingFontWeight, headingFontSize],
       selectedModeId: "mode1",
       collectionName: "Typography",
       typeFilter: "All",
@@ -358,12 +464,32 @@ describe("processVariables", () => {
     });
 
     const parsed = JSON.parse(result.jsonString);
-    expect(parsed.typography.fontFamily.type).toBe("fontFamily");
-    expect(parsed.typography.fontFamily.value).toBe("Inter");
-    expect(parsed.typography.fontWeight.semiBold.type).toBe("fontWeight");
-    expect(parsed.typography.fontWeight.semiBold.value).toBe(600);
-    expect(parsed.typography.lineHeight.normal.type).toBe("lineHeight");
-    expect(parsed.typography.letterSpacing.tight.type).toBe("letterSpacing");
+    expect(parsed.typography.heading.subSection.fontWeight.value).toBe("{typography.fontWeight.semiBold}");
+    expect(parsed.typography.heading.subSection.fontWeight.type).toBe("fontWeight");
+    expect(parsed.typography.heading.subSection.fontSize.value).toBe("{typography.fontSize.scaleZero}");
+    expect(parsed.typography.heading.subSection.fontSize.type).toBe("fontSize");
+  });
+
+  it("exports zIndex tokens matching Crayons format", () => {
+    const vars = [
+      makeVariable("zIndex/blanket", "FLOAT", 4),
+      makeVariable("zIndex/modal", "FLOAT", 5),
+      makeVariable("zIndex/toast", "FLOAT", 6),
+    ];
+    const allById = new Map(vars.map((v) => [v.id, v]));
+
+    const result = processVariables({
+      variables: vars,
+      selectedModeId: "mode1",
+      collectionName: "Misc",
+      typeFilter: "All",
+      allVariablesById: allById,
+    });
+
+    const parsed = JSON.parse(result.jsonString);
+    expect(parsed.zIndex.blanket.value).toBe(4);
+    expect(parsed.zIndex.blanket.type).toBe("zIndex");
+    expect(parsed.zIndex.modal.value).toBe(5);
   });
 
   it("reports diagnostics for broken aliases", () => {
@@ -434,7 +560,7 @@ describe("processVariables", () => {
     expect(JSON.parse(fashionResult.jsonString).color.primary.value).toBe("#0000ff");
   });
 
-  it("cross-collection alias uses target name for reference", () => {
+  it("cross-collection alias preserves originating type", () => {
     const externalVar: VariableData = {
       id: "ext-1",
       name: "size/200",
@@ -442,7 +568,7 @@ describe("processVariables", () => {
       valuesByMode: { mode1: 8 },
     };
 
-    const localVar = makeVariable("spacing/small", "FLOAT", makeAlias("ext-1"));
+    const localVar = makeVariable("spacing/padding/sm", "FLOAT", makeAlias("ext-1"));
 
     const allById = new Map([
       [externalVar.id, externalVar],
@@ -458,8 +584,8 @@ describe("processVariables", () => {
     });
 
     const parsed = JSON.parse(result.jsonString);
-    expect(parsed.spacing.small.value).toBe("{size.200}");
-    expect(parsed.spacing.small.type).toBe("spacing");
+    expect(parsed.spacing.padding.sm.value).toBe("{size.200}");
+    expect(parsed.spacing.padding.sm.type).toBe("spacing");
   });
 
   it("reports missing mode values", () => {
@@ -501,16 +627,12 @@ describe("tokenTreeToJson", () => {
   it("produces identical output for preview, copy, and download", () => {
     const vars: ExportedVariable[] = [
       { path: ["color", "red"], value: "#ff0000", type: "color" },
-      { path: ["spacing", "sm"], value: 4, type: "spacing" },
+      { path: ["spacing", "sm"], value: "0.25rem", type: "spacing" },
     ];
     const tree = sortTokenTree(buildTokenTree(vars));
     const json = tokenTreeToJson(tree);
-
-    // Calling again must produce identical string
     const json2 = tokenTreeToJson(tree);
     expect(json).toBe(json2);
-
-    // Verify format: 2-space indent, trailing newline
     expect(json).toMatch(/^\{/);
     expect(json).toMatch(/\n$/);
     expect(json).toContain("  ");
@@ -521,8 +643,8 @@ describe("tokenTreeToJson", () => {
 describe("sortTokenTree", () => {
   it("sorts keys alphabetically", () => {
     const tree = buildTokenTree([
-      { path: ["z", "b"], value: 1, type: "spacing" },
-      { path: ["a", "c"], value: 2, type: "spacing" },
+      { path: ["z", "b"], value: "0.5rem", type: "spacing" },
+      { path: ["a", "c"], value: "1rem", type: "spacing" },
     ]);
     const sorted = sortTokenTree(tree);
     const keys = Object.keys(sorted);

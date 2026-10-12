@@ -14,6 +14,7 @@ export type ExportTokenType =
   | "duration"
   | "textCase"
   | "textDecoration"
+  | "zIndex"
   | "number"
   | "string"
   | "boolean";
