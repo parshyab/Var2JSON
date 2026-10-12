@@ -7,8 +7,8 @@ export interface TokenTypeRule {
 }
 
 const MANDATORY_RULES: TokenTypeRule[] = [
-  { segments: ["cornerRadius"], matchPosition: "any", type: "spacing" },
-  { segments: ["borderRadius"], matchPosition: "any", type: "spacing" },
+  { segments: ["cornerradius"], matchPosition: "any", type: "spacing" },
+  { segments: ["borderradius"], matchPosition: "any", type: "spacing" },
   { segments: ["radius"], matchPosition: "any", type: "spacing" },
 ];
 
@@ -63,9 +63,13 @@ const SEMANTIC_RULES: TokenTypeRule[] = [
   { segments: ["textDecoration"], matchPosition: "any", type: "textDecoration" },
 ];
 
+function normalizeSegment(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, "");
+}
+
 function matchesRule(pathSegments: string[], rule: TokenTypeRule): boolean {
-  const lowerPath = pathSegments.map((s) => s.toLowerCase());
-  const lowerRule = rule.segments.map((s) => s.toLowerCase());
+  const lowerPath = pathSegments.map(normalizeSegment);
+  const lowerRule = rule.segments.map(normalizeSegment);
 
   if (rule.matchPosition === "prefix") {
     if (lowerPath.length < lowerRule.length) return false;

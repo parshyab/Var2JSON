@@ -44,6 +44,17 @@ describe("resolveTokenType", () => {
     expect(resolveTokenType(["component", "card", "cornerRadius", "default"], "FLOAT")).toBe("spacing");
   });
 
+  // Space-separated Figma variable names (e.g. "corner radius/small")
+  it("resolves 'corner radius' (with space) as spacing", () => {
+    expect(resolveTokenType(["corner radius", "small"], "FLOAT")).toBe("spacing");
+    expect(resolveTokenType(["corner radius", "medium"], "FLOAT")).toBe("spacing");
+    expect(resolveTokenType(["corner radius", "large"], "FLOAT")).toBe("spacing");
+  });
+
+  it("resolves 'border radius' (with space) as spacing", () => {
+    expect(resolveTokenType(["border radius", "lg"], "FLOAT")).toBe("spacing");
+  });
+
   // Size → spacing (Crayons pattern: size/* has type "spacing")
   it("resolves size/* as spacing (Crayons pattern)", () => {
     expect(resolveTokenType(["size", "200"], "FLOAT")).toBe("spacing");
