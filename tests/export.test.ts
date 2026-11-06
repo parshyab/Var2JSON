@@ -215,9 +215,9 @@ describe("collectTypeFilterOptions", () => {
       { path: ["spacing", "sm"], value: "0.5rem", type: "spacing", filterCategory: "spacing" },
       { path: ["color", "red"], value: "#f00", type: "color", filterCategory: "color" },
       { path: ["cornerRadius", "sm"], value: "{size.300}", type: "spacing", filterCategory: "cornerRadius" },
-      { path: ["fontSize", "base"], value: "0.9375rem", type: "fontSize", filterCategory: "fontSize" },
+      { path: ["fontSize", "base"], value: "0.9375rem", type: "fontSize", filterCategory: "typography" },
     ];
-    expect(collectTypeFilterOptions(vars)).toEqual(["color", "cornerRadius", "fontSize", "spacing"]);
+    expect(collectTypeFilterOptions(vars)).toEqual(["color", "cornerRadius", "spacing", "typography"]);
   });
 });
 

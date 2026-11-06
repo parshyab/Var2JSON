@@ -233,3 +233,41 @@ describe("resolveTokenTypeFromCollection", () => {
     expect(resolveTokenTypeFromCollection(["cornerRadius", "sm"], "FLOAT", "_Sizing")).toBe("spacing");
   });
 });
+
+describe("resolveTokenTypeFromCollection — typography subtype detection", () => {
+  it("detects fontSize under typography prefix", () => {
+    expect(resolveTokenTypeFromCollection(["typography", "fontSize", "scaleZero"], "FLOAT", "Primitives")).toBe("fontSize");
+  });
+
+  it("detects fontWeight under typography prefix", () => {
+    expect(resolveTokenTypeFromCollection(["typography", "fontWeight", "regular"], "FLOAT", "Primitives")).toBe("fontWeight");
+  });
+
+  it("detects lineHeight under typography prefix", () => {
+    expect(resolveTokenTypeFromCollection(["typography", "lineHeight", "lhOne"], "FLOAT", "Primitives")).toBe("lineHeight");
+  });
+
+  it("detects letterSpacing under typography prefix", () => {
+    expect(resolveTokenTypeFromCollection(["typography", "letterSpacing", "lsNegthree"], "FLOAT", "Primitives")).toBe("letterSpacing");
+  });
+
+  it("detects fontSize via 'scale' keyword under typography", () => {
+    expect(resolveTokenTypeFromCollection(["typography", "scale", "6"], "FLOAT", "Primitives")).toBe("fontSize");
+  });
+
+  it("detects fontWeight via 'weight' keyword under typography", () => {
+    expect(resolveTokenTypeFromCollection(["typography", "weight", "bold"], "FLOAT", "Primitives")).toBe("fontWeight");
+  });
+
+  it("detects lineHeight via 'leading' keyword under typography", () => {
+    expect(resolveTokenTypeFromCollection(["typography", "leading", "normal"], "FLOAT", "Primitives")).toBe("lineHeight");
+  });
+
+  it("detects letterSpacing via 'tracking' keyword under typography", () => {
+    expect(resolveTokenTypeFromCollection(["typography", "tracking", "tight"], "FLOAT", "Primitives")).toBe("letterSpacing");
+  });
+
+  it("does not apply typography subtype without typography prefix", () => {
+    expect(resolveTokenTypeFromCollection(["custom", "scale", "6"], "FLOAT", "Primitives")).toBe("number");
+  });
+});

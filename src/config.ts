@@ -33,24 +33,38 @@ const SEMANTIC_RULES: TokenTypeRule[] = [
   { segments: ["typography", "fontSize"], matchPosition: "prefix", type: "fontSize" },
   { segments: ["fontSize"], matchPosition: "any", type: "fontSize" },
   { segments: ["font", "size"], matchPosition: "any", type: "fontSize" },
+  { segments: ["fs"], matchPosition: "prefix", type: "fontSize" },
+  { segments: ["fontsize"], matchPosition: "prefix", type: "fontSize" },
+  { segments: ["textsize"], matchPosition: "any", type: "fontSize" },
 
   { segments: ["typography", "fontFamily"], matchPosition: "prefix", type: "fontFamily" },
   { segments: ["fontFamily"], matchPosition: "any", type: "fontFamily" },
   { segments: ["font", "family"], matchPosition: "any", type: "fontFamily" },
+  { segments: ["fontfamily"], matchPosition: "prefix", type: "fontFamily" },
+  { segments: ["typeface"], matchPosition: "any", type: "fontFamily" },
 
   { segments: ["typography", "fontWeight"], matchPosition: "prefix", type: "fontWeight" },
   { segments: ["fontWeight"], matchPosition: "any", type: "fontWeight" },
   { segments: ["font", "weight"], matchPosition: "any", type: "fontWeight" },
+  { segments: ["fw"], matchPosition: "prefix", type: "fontWeight" },
+  { segments: ["fontweight"], matchPosition: "prefix", type: "fontWeight" },
+  { segments: ["weight"], matchPosition: "any", type: "fontWeight" },
 
   { segments: ["typography", "lineHeight"], matchPosition: "prefix", type: "lineHeight" },
   { segments: ["lineHeight"], matchPosition: "any", type: "lineHeight" },
   { segments: ["line", "height"], matchPosition: "any", type: "lineHeight" },
   { segments: ["fontheight"], matchPosition: "any", type: "lineHeight" },
   { segments: ["font", "height"], matchPosition: "any", type: "lineHeight" },
+  { segments: ["lh"], matchPosition: "prefix", type: "lineHeight" },
+  { segments: ["lineheight"], matchPosition: "prefix", type: "lineHeight" },
+  { segments: ["leading"], matchPosition: "any", type: "lineHeight" },
 
   { segments: ["typography", "letterSpacing"], matchPosition: "prefix", type: "letterSpacing" },
   { segments: ["letterSpacing"], matchPosition: "any", type: "letterSpacing" },
   { segments: ["letter", "spacing"], matchPosition: "any", type: "letterSpacing" },
+  { segments: ["ls"], matchPosition: "prefix", type: "letterSpacing" },
+  { segments: ["letterspacing"], matchPosition: "prefix", type: "letterSpacing" },
+  { segments: ["tracking"], matchPosition: "any", type: "letterSpacing" },
 
   { segments: ["typography", "paragraphSpacing"], matchPosition: "prefix", type: "paragraphSpacing" },
   { segments: ["paragraphSpacing"], matchPosition: "any", type: "paragraphSpacing" },
@@ -138,6 +152,46 @@ export function resolveTokenType(
   return null;
 }
 
+const TYPOGRAPHY_SUBTYPE_KEYWORDS: { keyword: string; type: ExportTokenType }[] = [
+  { keyword: "fontsize", type: "fontSize" },
+  { keyword: "size", type: "fontSize" },
+  { keyword: "scale", type: "fontSize" },
+  { keyword: "fs", type: "fontSize" },
+  { keyword: "fontweight", type: "fontWeight" },
+  { keyword: "weight", type: "fontWeight" },
+  { keyword: "fw", type: "fontWeight" },
+  { keyword: "lineheight", type: "lineHeight" },
+  { keyword: "leading", type: "lineHeight" },
+  { keyword: "lh", type: "lineHeight" },
+  { keyword: "letterspacing", type: "letterSpacing" },
+  { keyword: "tracking", type: "letterSpacing" },
+  { keyword: "ls", type: "letterSpacing" },
+  { keyword: "fontfamily", type: "fontFamily" },
+  { keyword: "family", type: "fontFamily" },
+  { keyword: "typeface", type: "fontFamily" },
+  { keyword: "paragraphspacing", type: "paragraphSpacing" },
+  { keyword: "paragraphindent", type: "paragraphIndent" },
+];
+
+function tryTypographySubtype(pathSegments: string[]): ExportTokenType | null {
+  const normalized = pathSegments.map(normalizeSegment);
+  const hasTypographyPrefix =
+    normalized[0] === "typography" ||
+    normalized[0] === "type" ||
+    normalized[0] === "typo" ||
+    normalized[0] === "text";
+
+  if (!hasTypographyPrefix) return null;
+
+  for (let i = 1; i < normalized.length; i++) {
+    for (const entry of TYPOGRAPHY_SUBTYPE_KEYWORDS) {
+      if (normalized[i] === entry.keyword) return entry.type;
+    }
+  }
+
+  return null;
+}
+
 export function resolveTokenTypeFromCollection(
   pathSegments: string[],
   figmaResolvedType: string,
@@ -147,6 +201,12 @@ export function resolveTokenTypeFromCollection(
   // Try path-based resolution first
   const pathResult = resolveTokenType(pathSegments, figmaResolvedType, pathOverrides);
   if (pathResult) return pathResult;
+
+  // Try typography subtype detection for FLOAT variables under typography-like paths
+  if (figmaResolvedType === "FLOAT") {
+    const typographySubtype = tryTypographySubtype(pathSegments);
+    if (typographySubtype) return typographySubtype;
+  }
 
   // Collection name heuristic for FLOAT types
   if (figmaResolvedType === "FLOAT") {
@@ -158,7 +218,7 @@ export function resolveTokenTypeFromCollection(
     if (lowerCollection.includes("opacity")) return "opacity";
     if (lowerCollection.includes("border")) return "borderWidth";
     if (lowerCollection.includes("duration") || lowerCollection.includes("motion")) return "duration";
-    if (lowerCollection.includes("typography")) return "number";
+    if (lowerCollection.includes("typography") || lowerCollection.includes("type")) return "number";
   }
 
   // Last resort: use Figma resolved type as a generic fallback
@@ -169,6 +229,12 @@ export function resolveTokenTypeFromCollection(
 
 const CORNER_RADIUS_SEGMENTS = ["cornerradius", "borderradius", "radius"];
 
+const TYPOGRAPHY_TYPES: Set<string> = new Set([
+  "fontSize", "fontWeight", "lineHeight", "letterSpacing",
+  "fontFamily", "paragraphSpacing", "paragraphIndent",
+  "textCase", "textDecoration",
+]);
+
 export function resolveFilterCategory(
   pathSegments: string[],
   exportType: ExportTokenType
@@ -178,6 +244,9 @@ export function resolveFilterCategory(
     if (CORNER_RADIUS_SEGMENTS.includes(seg)) {
       return "cornerRadius";
     }
+  }
+  if (TYPOGRAPHY_TYPES.has(exportType)) {
+    return "typography";
   }
   return exportType;
 }

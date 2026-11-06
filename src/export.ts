@@ -280,6 +280,10 @@ export function processVariables(input: ProcessVariablesInput): ExportResult {
       continue;
     }
 
+    if (tokenType === "number") {
+      console.log(`[Var2JSON debug] classified as "number": name="${variable.name}" path=[${path.join(", ")}] figmaType=${variable.resolvedType}`);
+    }
+
     const rawValue = variable.valuesByMode[selectedModeId];
 
     if (rawValue === undefined) {
